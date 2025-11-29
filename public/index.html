@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Harita Debug Modu</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <style>
+        /* CSS BURADA (Haritanın görünmesi için şart) */
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+        }
+        #map {
+            height: 100vh; /* Ekranın tamamı */
+            width: 100%;
+            background-color: #e0e0e0; /* Harita yüklenmezse gri görünür */
+        }
+    </style>
+</head>
+<body>
+
+    <div id="map"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+        // JS KODLARI BURADA
+        console.log("Harita başlatılıyor...");
+
+        // 1. Haritayı Başlat
+        var map = L.map('map').setView([39.0, 35.0], 6); // Türkiye
+        console.log("Harita objesi oluştu.");
+
+        // 2. Harita Görsellerini (Tiles) Ekle
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        // 3. Basit Bir Test Pini Ekle
+        L.marker([39.0, 35.0]).addTo(map)
+            .bindPopup('Ben buradayım!')
+            .openPopup();
+            
+        console.log("Pin eklendi.");
+        
+        // 4. Veritabanındaki Pinleri Çek (Senin kodun)
+        fetch('/api/pins')
+            .then(res => res.json())
+            .then(data => {
+                console.log("Veritabanından gelen pinler:", data);
+                data.forEach(pin => {
+                    L.marker([pin.lat, pin.lng]).addTo(map);
+                });
+            })
+            .catch(err => console.error("Veri çekme hatası:", err));
+
+        // 5. Tıklama Olayı (Senin kodun)
+        map.on('click', function(e) {
+            const renkSecimi = prompt("Renk yazın (red, green):", "red");
+            if(renkSecimi) {
+                fetch('/api/pins', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        lat: e.latlng.lat, 
+                        lng: e.latlng.lng, 
+                        color: renkSecimi 
+                    })
+                }).then(() => {
+                    L.marker(e.latlng).addTo(map);
+                    alert("Kaydedildi!");
+                });
+            }
+        });
+    </script>
+</body>
+</html>
