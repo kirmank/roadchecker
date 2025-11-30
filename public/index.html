@@ -1,81 +1,71 @@
-<!DOCTYPE html>
-<html lang="tr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Harita Debug Modu</title>
-    
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    
-    <style>
-        /* CSS BURADA (Haritanın görünmesi için şart) */
-        body, html {
-            margin: 0;
-            padding: 0;
-            height: 100%;
-        }
-        #map {
-            height: 100vh; /* Ekranın tamamı */
-            width: 100%;
-            background-color: #e0e0e0; /* Harita yüklenmezse gri görünür */
-        }
-    </style>
-</head>
-<body>
+require('dotenv').config();
+const express = require('express');
+const mongoose = require('mongoose');
+const cors = require('cors');
+const Pin = require('./models/Pin'); 
 
-    <div id="map"></div>
+const app = express();
+const PORT = process.env.PORT || 3000;
+const ESP_KEY = process.env.ESP_API_KEY || 'change-me';
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+// --- Middleware ---
+app.use(cors());
+app.use(express.json());
+app.use(express.static('public'));
 
-    <script>
-        // JS KODLARI BURADA
-        console.log("Harita başlatılıyor...");
+// --- MongoDB Bağlantısı ---
+mongoose.connect(process.env.MONGO_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+})
+.then(() => console.log('✅ MongoDB Bağlantısı Başarılı'))
+.catch(err => console.error('❌ Bağlantı Hatası:', err));
 
-        // 1. Haritayı Başlat
-        var map = L.map('map').setView([39.0, 35.0], 6); // Türkiye
-        console.log("Harita objesi oluştu.");
+// --- API ROTALARI ---
 
-        // 2. Harita Görsellerini (Tiles) Ekle
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors'
-        }).addTo(map);
+// 1. GET: Tüm Pinleri Getir (Son 1000 kayıt)
+app.get('/api/pins', async (req, res) => {
+  try {
+    const pins = await Pin.find().sort({ date: -1 }).limit(1000);
+    res.json(pins);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
 
-        // 3. Basit Bir Test Pini Ekle
-        L.marker([39.0, 35.0]).addTo(map)
-            .bindPopup('Ben buradayım!')
-            .openPopup();
-            
-        console.log("Pin eklendi.");
-        
-        // 4. Veritabanındaki Pinleri Çek (Senin kodun)
-        fetch('/api/pins')
-            .then(res => res.json())
-            .then(data => {
-                console.log("Veritabanından gelen pinler:", data);
-                data.forEach(pin => {
-                    L.marker([pin.lat, pin.lng]).addTo(map);
-                });
-            })
-            .catch(err => console.error("Veri çekme hatası:", err));
+// 2. POST: ESP32 İçin Güvenli Rota 📡
+app.post('/api/esp/pins', async (req, res) => {
+  // Güvenlik Kontrolü
+  const gelenKey = req.headers['x-api-key'];
+  
+  if (!gelenKey || gelenKey !== ESP_KEY) {
+    console.log(`⚠️ [ESP32] Yetkisiz Erişim! IP: ${req.ip}`);
+    return res.status(401).json({ message: 'Yetkisiz: Yanlış API Key' });
+  }
 
-        // 5. Tıklama Olayı (Senin kodun)
-        map.on('click', function(e) {
-            const renkSecimi = prompt("Renk yazın (red, green):", "red");
-            if(renkSecimi) {
-                fetch('/api/pins', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        lat: e.latlng.lat, 
-                        lng: e.latlng.lng, 
-                        color: renkSecimi 
-                    })
-                }).then(() => {
-                    L.marker(e.latlng).addTo(map);
-                    alert("Kaydedildi!");
-                });
-            }
-        });
-    </script>
-</body>
-</html>
+  // Veriyi Kaydet
+  const { lat, lng, color } = req.body;
+
+  // Validasyonlar
+  if (typeof lat !== 'number' || typeof lng !== 'number') {
+    return res.status(400).json({ message: 'Hata: Enlem/Boylam sayı olmalı.' });
+  }
+  if (lat === 0 && lng === 0) {
+    return res.status(400).json({ message: 'Hata: GPS verisi yok (0,0)' });
+  }
+
+  const newPin = new Pin({ lat, lng, color: color || 'green' });
+
+  try {
+    const savedPin = await newPin.save();
+    console.log(`📡 [ESP32] Veri Geldi -> Konum: ${lat.toFixed(5)}, ${lng.toFixed(5)} | Renk: ${color}`);
+    return res.status(201).json(savedPin);
+  } catch (err) {
+    return res.status(500).json({ message: err.message });
+  }
+});
+
+// Sunucuyu Başlat
+app.listen(PORT, () => {
+  console.log(`🚀 Sunucu çalışıyor: http://localhost:${PORT}`);
+});

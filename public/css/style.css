@@ -58,3 +58,23 @@ button {
 button:hover {
     background-color: #45a049;
 }
+
+/* Araba İkonu Stili */
+.car-icon-marker {
+    background: transparent;
+    border: none;
+    text-align: center;
+    font-size: 24px; /* Arabanın boyutu */
+    filter: drop-shadow(3px 3px 2px rgba(0,0,0,0.5)); /* Arabaya gölge ver ki haritada belli olsun */
+}
+
+/* ... üstteki kodlar aynen kalsın ... */
+
+/* Araba İkonu Ayarı */
+.car-icon-marker {
+    background: transparent;
+    border: none; /* Çerçeveyi kaldır */
+    text-align: center;
+    font-size: 24px; /* Arabanın büyüklüğü */
+    filter: drop-shadow(0px 2px 4px rgba(0,0,0,0.5)); /* Hafif gölge */
+}

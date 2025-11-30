@@ -1,50 +1,64 @@
-// Haritayı Başlat (İstanbul odaklı)
-const map = L.map('map').setView([41.0370, 28.9850], 13);
+// Haritayı Başlat
+const map = L.map('map').setView([41.0150, 28.9750], 13); // İstanbul
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© OpenStreetMap contributors'
 }).addTo(map);
 
-// Renkli İkon Oluşturucu
-function getIcon(color) {
-    return new L.Icon({
-        iconUrl: `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-${color}.png`,
-        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-        iconSize: [25, 41],
-        iconAnchor: [12, 41],
-        popupAnchor: [1, -34],
-        shadowSize: [41, 41]
+// Markerları tutan katman
+let markersLayer = L.layerGroup().addTo(map);
+
+// --- RENKLİ ARABA İKONU OLUŞTURUCU ---
+function getCarIcon(gelenRenk) {
+    // 1. Veritabanından gelen renk ismini (red, yellow) Hex koduna çevir
+    // Böylece "Gold" gibi özel renkler kullanabiliriz.
+    let renkKodu = 'red'; // Varsayılan
+
+    if (gelenRenk === 'yellow') renkKodu = '#FFD700';      // Altın Sarısı
+    else if (gelenRenk === 'orange') renkKodu = '#FF8C00'; // Koyu Turuncu
+    else if (gelenRenk === 'green') renkKodu = '#32CD32';  // Fıstık Yeşili
+    else renkKodu = 'red';                                 // Kırmızı
+
+    // 2. HTML ile Araba İkonunu Oluştur (FontAwesome)
+    return L.divIcon({
+        className: 'car-icon-marker', // CSS'teki sınıf
+        html: `<i class="fa-solid fa-car-side" style="color: ${renkKodu};"></i>`,
+        iconSize: [30, 30],
+        iconAnchor: [15, 15],
+        popupAnchor: [0, -10]
     });
 }
 
-// Haritadaki tüm markerları tutacak grup (Temizleyip tekrar çizmek için)
-let markersLayer = L.layerGroup().addTo(map);
-
-// --- VERİ ÇEKME FONKSİYONU ---
+// --- VERİLERİ ÇEK VE HARİTAYI GÜNCELLE ---
 async function loadPins() {
     try {
         const response = await fetch('/api/pins');
         const pins = await response.json();
 
-        // Eski pinleri temizle (Yoksa üst üste binlerce pin olur)
+        // Eski arabaları haritadan sil
         markersLayer.clearLayers();
 
-        // Yeni gelen listeyi haritaya bas
         pins.forEach(pin => {
-            L.marker([pin.lat, pin.lng], { icon: getIcon(pin.color) })
-             .bindPopup(`<b>Durum:</b> ${pin.color}<br><b>Saat:</b> ${new Date(pin.date).toLocaleTimeString()}`)
+            // Rengi fonksiyona gönderip doğru ikonu alıyoruz
+            const arabaIkonu = getCarIcon(pin.color);
+
+            L.marker([pin.lat, pin.lng], { icon: arabaIkonu })
+             .bindPopup(`
+                <div style="text-align:center">
+                    <i class="fa-solid fa-car" style="color:${pin.color}; font-size:20px"></i><br>
+                    <b>Durum:</b> ${pin.color.toUpperCase()}<br>
+                </div>
+             `)
              .addTo(markersLayer);
         });
-        
-        console.log("🔄 Veriler güncellendi: " + pins.length + " adet pin.");
 
     } catch (error) {
-        console.error("Veri çekilemedi:", error);
+        console.error("Hata:", error);
     }
 }
 
-// 1. Sayfa açılınca yükle
+// Başlat
 loadPins();
 
-// 2. Her 3 saniyede bir otomatik yenile (Canlı Takip Hissi)
-setInterval(loadPins, 3000);
+// Her 2 saniyede bir güncelle
+setInterval(loadPins, 2000);

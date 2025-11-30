@@ -18,8 +18,8 @@
 // --- Ayarlar: kendi ağa ve sunucuya göre değiştirin ---
 const char* ssid = "izvini";
 const char* password = "ahmethasan";
-const char* serverUrl = "http://192.168.1.100:3000/api/esp/pins";
-const char* apiKey = "change-me"; // process.env.ESP_API_KEY ile eşleşmeli
+const char* serverUrl = "http://192.168.1.104:3000/api/esp/pins";
+const char* apiKey = "degistirbeni"; // process.env.ESP_API_KEY ile eşleşmeli
 
 // GPS (NEO-6M) - HardwareSerial (Serial2)
 const int GPS_RX_PIN = 16; // connect TX of GPS to this (ESP32 RX2)
