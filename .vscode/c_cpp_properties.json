@@ -1,0 +1,27 @@
+{
+  "configurations": [
+    {
+      "name": "Linux",
+      "includePath": [
+        "${workspaceFolder}/**",
+        "${workspaceFolder}/esp32/**",
+        "${env:HOME}/.platformio/packages/framework-arduinoespressif32/**",
+        "${env:HOME}/.platformio/packages/toolchain-xtensa32/**",
+        "${env:HOME}/.arduino15/packages/esp32/hardware/esp32/**"
+      ],
+      "defines": [],
+      "compilerPath": "/usr/bin/gcc",
+      "cStandard": "c11",
+      "cppStandard": "c++17",
+      "intelliSenseMode": "linux-gcc-x64",
+      "browse": {
+        "path": [
+          "${workspaceFolder}",
+          "${env:HOME}/.platformio/packages/framework-arduinoespressif32"
+        ],
+        "limitSymbolsToIncludedHeaders": true
+      }
+    }
+  ],
+  "version": 4
+}
