@@ -49,6 +49,33 @@ app.post('/api/pins', async (req, res) => {
   }
 });
 
+// --- ESP32 için hafif, anahtarlı API endpoint'i ---
+// ESP32 cihazlarının doğrudan POST ile pin göndermesi amacıyla kullanılır.
+// Güvenlik için `x-api-key` header'ı ile basit doğrulama yapar.
+app.post('/api/esp/pins', async (req, res) => {
+  const apiKey = req.headers['x-api-key'] || req.query.apiKey;
+  const expected = process.env.ESP_API_KEY || 'change-me';
+
+  if (!apiKey || apiKey !== expected) {
+    return res.status(401).json({ message: 'Unauthorized: invalid API key' });
+  }
+
+  const { lat, lng, color } = req.body;
+
+  if (typeof lat !== 'number' || typeof lng !== 'number') {
+    return res.status(400).json({ message: 'Bad Request: lat and lng must be numbers' });
+  }
+
+  try {
+    const newPin = new Pin({ lat, lng, color });
+    const savedPin = await newPin.save();
+    console.log(`📡 ESP32 -> Yeni Pin: ${color} @ ${lat},${lng} from ${req.ip}`);
+    return res.status(201).json(savedPin);
+  } catch (err) {
+    return res.status(500).json({ message: err.message });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`🚀 Sunucu çalışıyor: http://localhost:${PORT}`);
 });
